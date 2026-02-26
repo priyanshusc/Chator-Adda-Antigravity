@@ -30,7 +30,8 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['Pending', 'Preparing', 'Ready', 'Completed', 'Cancelled'],
+        // NEW: Added 'Picked Up' to the allowed list of statuses
+        enum: ['Pending', 'Preparing', 'Ready', 'Picked Up', 'Completed', 'Cancelled'],
         default: 'Pending',
     },
     paymentMethod: {

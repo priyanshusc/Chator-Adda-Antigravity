@@ -4,8 +4,10 @@ import { ShoppingBag, Minus, Plus, Trash2, IndianRupee } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useSocket } from '../hooks/useSocket';
 import PaymentModal from './PaymentModal';
+import { useNavigate } from 'react-router-dom';
 
 const Cart = ({ isOpen, onClose }) => {
+    const navigate = useNavigate();
     const { cartItems, updateQuantity, removeFromCart, getCartTotal, clearCart, setActiveOrder } = useCart();
     const socket = useSocket();
 
@@ -17,27 +19,74 @@ const Cart = ({ isOpen, onClose }) => {
         }
     };
 
-    const handlePaymentSuccess = (transactionId) => {
-        const newOrder = {
-            _id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-            user: { name: 'Student Profile' },
-            totalAmount: getCartTotal(),
-            status: 'Pending',
-            items: cartItems.map(item => ({ menuItem: { name: item.name }, quantity: item.quantity })),
-            transactionId: transactionId,
-            createdAt: new Date().toISOString(),
-        };
+    const handlePaymentSuccess = async (transactionId) => {
+        try {
+            const token = localStorage.getItem('token');
 
-        if (socket) {
-            console.log("Emitting order with TXN:", newOrder);
-            socket.emit('new_order', newOrder);
-            socket.emit('join_order', newOrder._id);
-            setActiveOrder(newOrder);
+            if (!token) {
+                throw new Error("You must be logged in to place an order.");
+            }
+
+            // 1. Prepare the payload exactly how the backend expects it
+            const orderPayload = {
+                items: cartItems.map(item => ({
+                    menuItem: item._id, // Must be the real MongoDB _id
+                    quantity: item.quantity,
+                    price: item.price   // The backend requires this field
+                })),
+                totalAmount: getCartTotal(),
+                paymentMethod: 'UPI',
+                transactionId: transactionId
+            };
+
+            console.log("Sending order to database:", orderPayload);
+
+            // 2. Perform the fetch
+            const response = await fetch('/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(orderPayload)
+            });
+
+            // 3. Handle non-JSON responses
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorMessage = 'Checkout failed';
+                try {
+                    const errorData = JSON.parse(errorText);
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    errorMessage = `Server Error: ${response.status} ${response.statusText}`;
+                }
+                throw new Error(errorMessage);
+            }
+
+            // 4. If successful, parse the JSON
+            const savedOrder = await response.json();
+            console.log("Database saved your order:", savedOrder);
+
+            // 5. Trigger WebSockets and UI changes (FIXED SECTION)
+            // Save the order to React Context so the /track page knows about it
+            setActiveOrder(savedOrder);
+
+            // Tell the WebSocket server we want to listen for updates on this specific order
+            if (socket) {
+                socket.emit('join_order', savedOrder._id);
+            }
+
+            // 6. Cleanup and redirect
+            setIsPaymentModalOpen(false);
+            clearCart();
+            onClose();
+            navigate('/track'); 
+
+        } catch (err) {
+            console.error("DEBUG - Full Error:", err);
+            alert(`Checkout Error: ${err.message}`);
         }
-
-        setIsPaymentModalOpen(false);
-        clearCart();
-        onClose();
     };
 
     return (

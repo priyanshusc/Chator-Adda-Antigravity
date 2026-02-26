@@ -22,11 +22,32 @@ const Register = () => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Placeholder registration logic; needs formData obj for backend Multer
-        console.log('Register attempt:', formData, profileImage);
-        navigate('/login');
+        try {
+            const res = await fetch('http://localhost:5000/api/users/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Registration failed');
+
+            // Save token and user data
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data));
+
+            // TODO: Upload profile image separately if needed later
+
+            alert('Registration successful!');
+            navigate('/menu');
+        } catch (error) {
+            console.error('Register error:', error);
+            alert(error.message);
+        }
     };
 
     return (

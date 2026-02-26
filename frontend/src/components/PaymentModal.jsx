@@ -30,20 +30,22 @@ const PaymentModal = ({ isOpen, onClose, totalAmount, onVerify }) => {
     return (
         <AnimatePresence>
             {isOpen && (
-                <>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                     />
 
+                    {/* Modal Content */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md z-50 glass-card p-6 shadow-2xl"
+                        className="relative w-full max-w-sm glass-card p-5 shadow-2xl rounded-2xl"
                     >
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold font-display flex items-center gap-2">
@@ -55,14 +57,14 @@ const PaymentModal = ({ isOpen, onClose, totalAmount, onVerify }) => {
                             </button>
                         </div>
 
-                        <div className="bg-dark-bg/50 rounded-xl p-6 text-center mb-6 border border-gray-800">
+                        <div className="bg-dark-bg/50 rounded-xl p-4 text-center mb-6 border border-gray-800">
                             <p className="text-gray-400 mb-2">Scan & Pay</p>
                             <div className="text-4xl font-bold text-spicy-yellow mb-6">₹{totalAmount}</div>
 
-                            {/* Placeholder QR Code */}
-                            <div className="w-48 h-48 mx-auto bg-white p-2 rounded-xl mb-4">
+                            {/* Shrunk QR size from w-48 to w-40 */}
+                            <div className="w-40 h-40 mx-auto bg-white p-2 rounded-xl mb-4">
                                 <img
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=chatoradda@upi&pn=ChatorAdda&am=${totalAmount}&cu=INR`}
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=chatoradda@upi&pn=ChatorAdda&am=${totalAmount}&cu=INR`}
                                     alt="UPI QR Code"
                                     className="w-full h-full object-contain"
                                 />
@@ -80,7 +82,7 @@ const PaymentModal = ({ isOpen, onClose, totalAmount, onVerify }) => {
                                     placeholder="Enter 12-digit UPI UTR Number"
                                     value={transactionId}
                                     onChange={(e) => setTransactionId(e.target.value.toUpperCase())}
-                                    className="w-full bg-dark-bg border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-spicy focus:ring-1 focus:ring-spicy transition-colors text-white uppercase tracking-wider"
+                                    className="w-full bg-dark-bg border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:border-spicy focus:ring-1 text-sm focus:ring-spicy transition-colors text-white uppercase tracking-wider"
                                 />
                                 {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
                             </div>
@@ -110,7 +112,7 @@ const PaymentModal = ({ isOpen, onClose, totalAmount, onVerify }) => {
                             </motion.button>
                         </div>
                     </motion.div>
-                </>
+                </div>
             )}
         </AnimatePresence>
     );

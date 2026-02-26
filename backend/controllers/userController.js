@@ -97,4 +97,28 @@ const uploadProfileImage = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, loginUser, getUserProfile, uploadProfileImage };
+// Seed an Admin User
+const seedAdmin = async (req, res) => {
+    try {
+        const adminExists = await User.findOne({ role: 'admin' });
+        if (adminExists) {
+            return res.status(400).json({ message: 'Admin already exists' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('admin123', salt);
+
+        const adminUser = await User.create({
+            name: 'Super Admin',
+            email: 'admin@chatoradda.com',
+            password: hashedPassword,
+            role: 'admin'
+        });
+
+        res.status(201).json({ message: 'Admin created successfully', email: adminUser.email, password: 'admin123' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+module.exports = { registerUser, loginUser, getUserProfile, uploadProfileImage, seedAdmin };

@@ -1,38 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, CheckCircle2, Flame, User } from 'lucide-react';
-
-const MOCK_ORDERS = [
-    { _id: 'ORD-101', user: { name: 'Rahul Sharma' }, totalAmount: 269, status: 'Pending', items: [{ menuItem: { name: 'Dragon Breath Burger' }, quantity: 1 }, { menuItem: { name: 'Volcano Loaded Fries' }, quantity: 1 }], createdAt: new Date(Date.now() - 1000 * 60 * 5) },
-    { _id: 'ORD-102', user: { name: 'Priya Patel' }, totalAmount: 130, status: 'Preparing', items: [{ menuItem: { name: 'Tandoori Paneer Wrap' }, quantity: 1 }], createdAt: new Date(Date.now() - 1000 * 60 * 15) },
-    { _id: 'ORD-103', user: { name: 'Amit Kumar' }, totalAmount: 90, status: 'Ready', items: [{ menuItem: { name: 'Mango Tango Cooler' }, quantity: 1 }], createdAt: new Date(Date.now() - 1000 * 60 * 30) },
-];
+import { Clock, CheckCircle2, Flame, User, PackageCheck } from 'lucide-react';
+import { useSocket } from '../hooks/useSocket';
 
 const STATUS_COLORS = {
     Pending: 'bg-red-500/20 text-red-500 border-red-500/30',
     Preparing: 'bg-spicy-yellow/20 text-spicy-yellow border-spicy-yellow/30',
-    Ready: 'bg-green-500/20 text-green-400 border-green-500/30'
+    Ready: 'bg-green-500/20 text-green-400 border-green-500/30',
+    'Picked Up': 'bg-blue-500/20 text-blue-400 border-blue-500/30' // NEW COLOR
 };
 
-import { useSocket } from '../hooks/useSocket';
-
 const OrderManager = () => {
-    const [orders, setOrders] = useState(MOCK_ORDERS);
+    const [orders, setOrders] = useState([]);
     const socket = useSocket();
 
-    React.useEffect(() => {
+    useEffect(() => {
+        const fetchOrders = async () => {
+            try {
+                const res = await fetch('/api/orders', {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+                    }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setOrders(data.reverse());
+                }
+            } catch (error) {
+                console.error("Failed to fetch orders:", error);
+            }
+        };
+        fetchOrders();
+    }, []);
+
+    useEffect(() => {
         if (!socket) return;
         socket.on('new_order', (order) => {
             console.log("Received new order:", order);
             setOrders(prev => [order, ...prev]);
         });
-        return () => socket.off('new_order');
+        socket.on('admin_order_update', (updatedOrder) => {
+            setOrders(prev => prev.map(o => o._id === updatedOrder._id ? updatedOrder : o));
+        });
+        return () => {
+            socket.off('new_order');
+            socket.off('admin_order_update');
+        };
     }, [socket]);
 
-    const updateStatus = (orderId, newStatus) => {
-        setOrders(orders.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
+    const updateStatus = async (orderId, newStatus) => {
+        try {
+            const res = await fetch(`/api/orders/${orderId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (res.ok) {
+                const updatedOrder = await res.json();
+                setOrders(prev => prev.map(o => o._id === orderId ? updatedOrder : o));
+            }
+        } catch (error) {
+            console.error("Failed to update status:", error);
+        }
+
         if (socket) {
-            socket.emit('update_order_status', { orderId, status: newStatus });
+            console.log("Admin emitting status update for:", orderId);
+            socket.emit('update_order_status', {
+                orderId: orderId,
+                status: newStatus
+            });
         }
     };
 
@@ -58,9 +97,24 @@ const OrderManager = () => {
             );
         }
         if (order.status === 'Ready') {
+            // NEW BUTTON: Mark as Picked Up
             return (
                 <button
-                    onClick={() => setOrders(orders.filter(o => o._id !== order._id))}
+                    onClick={() => updateStatus(order._id, 'Picked Up')}
+                    className="w-full py-2 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 border border-blue-500/50 rounded-lg font-bold transition-colors flex items-center justify-center gap-2"
+                >
+                    <PackageCheck size={18} /> Mark as Picked Up
+                </button>
+            );
+        }
+        if (order.status === 'Picked Up') {
+            // FINAL BUTTON: Archive and clear from screen
+            return (
+                <button
+                    onClick={() => {
+                        updateStatus(order._id, 'Completed');
+                        setOrders(orders.filter(o => o._id !== order._id));
+                    }}
                     className="w-full py-2 bg-dark-surface hover:bg-gray-800 text-gray-400 border border-gray-700 rounded-lg font-semibold transition-colors"
                 >
                     Archive (Completed)
@@ -87,7 +141,7 @@ const OrderManager = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <AnimatePresence>
-                    {orders.map((order) => (
+                    {orders.filter(o => o.status !== 'Completed').map((order) => (
                         <motion.div
                             layout
                             initial={{ opacity: 0, scale: 0.95 }}
@@ -97,7 +151,7 @@ const OrderManager = () => {
                             className="glass-card flex flex-col overflow-hidden"
                         >
                             <div className="p-4 border-b border-gray-800 bg-dark-surface/30 flex justify-between items-center">
-                                <span className="font-bold font-display text-white">#{order._id}</span>
+                                <span className="font-bold font-display text-white">#{order._id.substring(0, 8)}...</span>
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold border ${STATUS_COLORS[order.status]}`}>
                                     {order.status}
                                 </span>
@@ -105,10 +159,10 @@ const OrderManager = () => {
 
                             <div className="p-5 flex-1">
                                 <div className="flex items-center gap-3 text-gray-400 text-sm mb-4">
-                                    <User size={16} /> {order.user.name}
+                                    <User size={16} /> {order.user?.name || "Student"}
                                     <span className="mx-1">•</span>
                                     <span className="text-gray-400">
-                                        {order.createdAt ? new Date(order.createdAt).toLocaleTimeString() : "Just Now"}
+                                        {order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Just Now"}
                                     </span>
                                 </div>
 
@@ -123,7 +177,7 @@ const OrderManager = () => {
                                         <li key={idx} className="flex justify-between items-start">
                                             <span className="text-gray-300">
                                                 <span className="text-spicy-yellow font-bold mr-2">{item.quantity}x</span>
-                                                {item.menuItem.name}
+                                                {item.menuItem?.name || "Menu Item"}
                                             </span>
                                         </li>
                                     ))}
@@ -142,7 +196,7 @@ const OrderManager = () => {
                     ))}
                 </AnimatePresence>
 
-                {orders.length === 0 && (
+                {orders.filter(o => o.status !== 'Completed').length === 0 && (
                     <div className="col-span-full py-12 text-center text-gray-500 border-2 border-dashed border-gray-800 rounded-2xl">
                         <div className="inline-flex justify-center items-center w-16 h-16 rounded-full bg-dark-surface mb-4">
                             <CheckCircle2 size={32} />

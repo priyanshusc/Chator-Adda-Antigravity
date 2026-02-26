@@ -20,13 +20,18 @@ const addOrderItems = async (req, res) => {
 
         const createdOrder = await order.save();
 
-        // Broadcast new order to admins
+        // NEW: Fetch the full order with the real food names from the DB
+        const fullOrder = await Order.findById(createdOrder._id)
+            .populate('user', 'name email')
+            .populate('items.menuItem');
+
+        // Broadcast the PERFECT, single copy to the Admin Dashboard
         const io = req.app.get('socketio');
         if (io) {
-            io.emit('new_order', createdOrder);
+            io.emit('new_order', fullOrder);
         }
 
-        res.status(201).json(createdOrder);
+        res.status(201).json(fullOrder);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

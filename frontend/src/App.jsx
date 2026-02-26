@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Home, LogIn } from 'lucide-react';
+import { ShoppingBag, Home, History } from 'lucide-react';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -10,10 +10,11 @@ import AdminDashboard from './pages/AdminDashboard';
 import InventoryManager from './components/InventoryManager';
 import OrderManager from './components/OrderManager';
 import OrderTracker from './components/OrderTracker';
+import OrderHistory from './components/OrderHistory'; // NEW COMPONENT
 import { useCart } from './context/CartContext';
 
 const Navbar = ({ onCartClick }) => {
-  const { cartItems } = useCart();
+  const { cartItems, activeOrder } = useCart();
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/';
   const isAdminPage = location.pathname.startsWith('/admin');
@@ -27,9 +28,23 @@ const Navbar = ({ onCartClick }) => {
       </Link>
 
       <div className="flex items-center gap-6">
+        
+        {/* Glow button ONLY shows when there is an active order */}
+        {activeOrder && (
+          <Link to="/track" className="bg-spicy text-white px-4 py-2 rounded-xl font-bold animate-pulse hover:scale-105 transition-transform">
+            Track Order
+          </Link>
+        )}
+
+        {/* Normal History link */}
+        <Link to="/orders" className="text-gray-400 hover:text-spicy-yellow transition-colors font-medium flex items-center gap-2">
+          <History size={18} /> History
+        </Link>
+
         <Link to="/menu" className="text-gray-400 hover:text-spicy-yellow transition-colors font-medium flex items-center gap-2">
           <Home size={18} /> Menu
         </Link>
+        
         <button
           onClick={onCartClick}
           className="relative text-white hover:text-spicy transition-colors"
@@ -62,6 +77,9 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/menu" element={<Menu />} />
             <Route path="/track" element={<OrderTracker />} />
+            
+            {/* NEW: Route for the order history */}
+            <Route path="/orders" element={<OrderHistory />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />}>

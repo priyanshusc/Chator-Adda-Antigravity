@@ -11,11 +11,34 @@ const Login = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Placeholder login logic; will hook to backend later
-        console.log('Login attempt:', formData);
-        navigate('/menu');
+        try {
+            const res = await fetch('http://localhost:5000/api/users/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Login failed');
+
+            // Save token and user data
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data));
+
+            // Check if admin
+            if (data.role === 'admin') {
+                navigate('/admin/orders');
+            } else {
+                navigate('/menu');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert(error.message);
+        }
     };
 
     return (

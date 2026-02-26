@@ -1,26 +1,102 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Edit2, Trash2, Plus, Image as ImageIcon } from 'lucide-react';
-
-const MOCK_INVENTORY = [
-    { _id: '1', name: "Dragon Breath Burger", price: 149, category: "Meals", isOutofStock: false, isSpicy: true },
-    { _id: '2', name: "Volcano Loaded Fries", price: 120, category: "Snacks", isOutofStock: false, isSpicy: true },
-    { _id: '3', name: "Tandoori Paneer Wrap", price: 130, category: "Snacks", isOutofStock: false, isSpicy: false },
-    { _id: '4', name: "Mango Tango Cooler", price: 90, category: "Beverages", isOutofStock: true, isSpicy: false }
-];
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Edit2, Trash2, Plus, Image as ImageIcon, X, Loader2 } from 'lucide-react';
 
 const InventoryManager = () => {
-    const [items, setItems] = useState(MOCK_INVENTORY);
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const toggleStock = (id) => {
-        setItems(items.map(item =>
-            item._id === id ? { ...item, isOutofStock: !item.isOutofStock } : item
-        ));
+    // Form State
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        price: '',
+        category: 'Snacks',
+        imageUrl: '',
+        isSpicy: false,
+        isOutofStock: false
+    });
+
+    const token = localStorage.getItem('token');
+
+    // 1. Fetch Items from Database
+    const fetchItems = async () => {
+        try {
+            const response = await fetch('/api/menu');
+            const data = await response.json();
+            setItems(data);
+        } catch (err) {
+            console.error("Fetch error:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleDelete = (id) => {
-        setItems(items.filter(item => item._id !== id));
+    useEffect(() => {
+        fetchItems();
+    }, []);
+
+    // 2. Add New Item
+    const handleAddItem = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await fetch('/api/menu', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                const savedItem = await response.json();
+                setItems([...items, savedItem]);
+                setIsModalOpen(false);
+                setFormData({ name: '', description: '', price: '', category: 'Snacks', imageUrl: '', isSpicy: false, isOutofStock: false });
+            }
+        } catch (err) {
+            alert("Failed to add item");
+        }
     };
+
+    // 3. Toggle Stock Status
+    const toggleStock = async (item) => {
+        try {
+            const response = await fetch(`/api/menu/${item._id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ isOutofStock: !item.isOutofStock })
+            });
+            if (response.ok) {
+                setItems(items.map(i => i._id === item._id ? { ...i, isOutofStock: !i.isOutofStock } : i));
+            }
+        } catch (err) {
+            console.error("Toggle error:", err);
+        }
+    };
+
+    // 4. Delete Item
+    const handleDelete = async (id) => {
+        if (!window.confirm("Delete this spicy item permanently?")) return;
+        try {
+            const response = await fetch(`/api/menu/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                setItems(items.filter(item => item._id !== id));
+            }
+        } catch (err) {
+            console.error("Delete error:", err);
+        }
+    };
+
+    if (loading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin text-spicy" size={48} /></div>;
 
     return (
         <div className="space-y-6">
@@ -29,11 +105,45 @@ const InventoryManager = () => {
                     <h1 className="text-3xl font-bold mb-1">Inventory Control</h1>
                     <p className="text-gray-400">Manage your menu items, pricing, and availability.</p>
                 </div>
-                <button className="bg-spicy text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-spicy-dark transition-colors shadow-lg shadow-spicy/30">
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-spicy text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-spicy-dark transition-colors shadow-lg shadow-spicy/30"
+                >
                     <Plus size={20} /> Add New Item
                 </button>
             </div>
 
+            {/* Modal for Adding Items */}
+            <AnimatePresence>
+                {isModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+                        <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative glass-card p-6 w-full max-w-md shadow-2xl overflow-y-auto max-h-[90vh]">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold">Add Spicy Dish</h2>
+                                <button onClick={() => setIsModalOpen(false)}><X /></button>
+                            </div>
+                            <form onSubmit={handleAddItem} className="space-y-4">
+                                <input type="text" placeholder="Item Name" className="w-full bg-dark-bg p-3 rounded-lg border border-gray-800" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+                                <textarea placeholder="Description" className="w-full bg-dark-bg p-3 rounded-lg border border-gray-800" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                                <input type="number" placeholder="Price (₹)" className="w-full bg-dark-bg p-3 rounded-lg border border-gray-800" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} required />
+                                <select className="w-full bg-dark-bg p-3 rounded-lg border border-gray-800 text-gray-400" value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                                    <option value="Snacks">Snacks</option>
+                                    <option value="Meals">Meals</option>
+                                    <option value="Beverages">Beverages</option>
+                                </select>
+                                <input type="text" placeholder="Image URL" className="w-full bg-dark-bg p-3 rounded-lg border border-gray-800" value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} />
+                                <div className="flex gap-4">
+                                    <label className="flex items-center gap-2"><input type="checkbox" checked={formData.isSpicy} onChange={e => setFormData({ ...formData, isSpicy: e.target.checked })} /> Spicy?</label>
+                                </div>
+                                <button type="submit" className="w-full bg-spicy text-white py-3 rounded-xl font-bold mt-4">Save to Menu</button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Table remains largely the same but uses 'item' data and 'toggleStock(item)' */}
             <div className="glass-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -48,18 +158,11 @@ const InventoryManager = () => {
                         </thead>
                         <tbody className="divide-y divide-gray-800">
                             {items.map((item) => (
-                                <motion.tr
-                                    layout
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    key={item._id}
-                                    className={`hover:bg-dark-surface/30 transition-colors ${item.isOutofStock ? 'opacity-70' : ''}`}
-                                >
+                                <tr key={item._id} className={`hover:bg-dark-surface/30 transition-colors ${item.isOutofStock ? 'opacity-70' : ''}`}>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
-                                                <ImageIcon size={20} className="text-gray-500" />
+                                                {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-gray-500" />}
                                             </div>
                                             <div>
                                                 <p className="font-bold text-white">{item.name}</p>
@@ -73,33 +176,14 @@ const InventoryManager = () => {
                                     <td className="px-6 py-4 font-semibold text-spicy-yellow">₹{item.price}</td>
                                     <td className="px-6 py-4 text-center">
                                         <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                value=""
-                                                className="sr-only peer"
-                                                checked={!item.isOutofStock}
-                                                onChange={() => toggleStock(item._id)}
-                                            />
-                                            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                                            <input type="checkbox" className="sr-only peer" checked={!item.isOutofStock} onChange={() => toggleStock(item)} />
+                                            <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                                         </label>
-                                        <p className={`text-xs mt-1 font-medium ${item.isOutofStock ? 'text-red-400' : 'text-green-400'}`}>
-                                            {item.isOutofStock ? 'Sold Out' : 'In Stock'}
-                                        </p>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-3">
-                                            <button className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors">
-                                                <Edit2 size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(item._id)}
-                                                className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        </div>
+                                    <td className="px-6 py-4 text-right">
+                                        <button onClick={() => handleDelete(item._id)} className="p-2 text-gray-400 hover:text-red-400"><Trash2 size={18} /></button>
                                     </td>
-                                </motion.tr>
+                                </tr>
                             ))}
                         </tbody>
                     </table>
