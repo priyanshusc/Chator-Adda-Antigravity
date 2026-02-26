@@ -81,7 +81,7 @@ const Cart = ({ isOpen, onClose }) => {
             setIsPaymentModalOpen(false);
             clearCart();
             onClose();
-            navigate('/track'); 
+            navigate('/orders'); 
 
         } catch (err) {
             console.error("DEBUG - Full Error:", err);

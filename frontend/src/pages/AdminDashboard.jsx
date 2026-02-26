@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, PackageSearch, ClipboardList, LogOut } from 'lucide-react';
+// ADDED 'History' to the lucide-react imports
+import { LayoutDashboard, PackageSearch, ClipboardList, LogOut, History } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const handleLogout = () => {
         // Placeholder logout
         navigate('/login');
     };
 
+    // ADDED the new Completed Orders link right below Live Orders
     const navLinks = [
         { name: 'Overview', path: '/admin', icon: LayoutDashboard },
         { name: 'Live Orders', path: '/admin/orders', icon: ClipboardList },
+        { name: 'Completed Orders', path: '/admin/completed', icon: History },
         { name: 'Inventory', path: '/admin/inventory', icon: PackageSearch },
     ];
 

@@ -23,13 +23,16 @@ const OrderHistory = () => {
         const fetchMyOrders = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch('/api/orders', {
+                // CHANGE THIS LINE: Add /myorders to the end of the URL
+                const res = await fetch('/api/orders/myorders', {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
                 if (res.ok) {
                     const data = await res.json();
                     setOrders(data.reverse());
+                } else {
+                    console.error("Failed to fetch history. Check if route exists!");
                 }
             } catch (error) {
                 console.error("Error loading order history:", error);
@@ -53,7 +56,7 @@ const OrderHistory = () => {
 
         const handleStatusUpdate = (data) => {
             console.log("Status update received on user side:", data);
-            setOrders(prevOrders => 
+            setOrders(prevOrders =>
                 prevOrders.map(o => o._id === data.orderId ? { ...o, status: data.status } : o)
             );
         };
@@ -195,13 +198,13 @@ const OrderHistory = () => {
                                 {order.status !== 'Completed' && order.status !== 'Picked Up' && (
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-spicy-yellow" />
                                 )}
-                                
+
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 border-b border-gray-800 pb-4">
                                     <div>
                                         <p className="text-sm text-gray-400 font-mono mb-1">Order #{order._id.substring(0, 8)}</p>
                                         <p className="text-gray-300 flex items-center gap-2 text-sm">
                                             <Clock size={14} className="text-spicy-yellow" />
-                                            {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                            {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
                                     <span className={`px-4 py-1.5 rounded-full text-sm font-bold border ${STATUS_COLORS[order.status] || STATUS_COLORS.Pending}`}>

@@ -1,115 +1,137 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock } from 'lucide-react';
+import { Mail, Lock, User, ShieldCheck, ArrowRight } from 'lucide-react';
 
 const Login = () => {
-    const [formData, setFormData] = useState({ email: '', password: '' });
+    const [loginType, setLoginType] = useState('student'); 
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
     const navigate = useNavigate();
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
         try {
-            const res = await fetch('http://localhost:5000/api/users/login', {
+            const res = await fetch('/api/users/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(formData),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
             });
-
             const data = await res.json();
-            if (!res.ok) throw new Error(data.message || 'Login failed');
-
-            // Save token and user data
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data));
-
-            // Check if admin
-            if (data.role === 'admin') {
-                navigate('/admin/orders');
+            
+            if (res.ok) {
+                // Use the 'role' field from your User.js schema
+                if (loginType === 'admin' && data.role !== 'admin') {
+                    throw new Error("Access Denied: This account does not have Admin privileges.");
+                }
+                
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('userInfo', JSON.stringify(data));
+                
+                navigate(data.role === 'admin' && loginType === 'admin' ? '/admin' : '/menu');
             } else {
-                navigate('/menu');
+                throw new Error(data.message || 'Invalid credentials');
             }
-        } catch (error) {
-            console.error('Login error:', error);
-            alert(error.message);
+        } catch (err) {
+            setError(err.message);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
-            {/* Background elements */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-spicy/20 rounded-full blur-[150px] -z-10 mix-blend-screen" />
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-spicy-red/20 rounded-full blur-[150px] -z-10 mix-blend-screen" />
-
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5 }}
-                className="glass-card w-full max-w-md p-8 relative overflow-hidden"
+        <div className="min-h-screen pt-24 pb-12 px-4 flex justify-center items-center bg-dark-bg relative overflow-hidden">
+            {/* Ambient Background Glows */}
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-spicy/10 rounded-full blur-[120px] pointer-events-none" />
+            <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-spicy-yellow/5 rounded-full blur-[100px] pointer-events-none" />
+            
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card w-full max-w-md p-8 rounded-3xl border border-gray-800 relative z-10 shadow-2xl"
             >
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-spicy-yellow via-spicy to-spicy-red" />
-
                 <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
-                    <p className="text-gray-400">Sign in to crave the spice 🔥</p>
+                    <h2 className="text-4xl font-bold font-display mb-2 text-gradient">Welcome Back</h2>
+                    <p className="text-gray-400">Login to your {loginType} portal</p>
                 </div>
 
+                {/* Role Toggle Tabs */}
+                <div className="flex p-1.5 bg-dark-surface rounded-2xl mb-8 border border-gray-800 shadow-inner">
+                    <button
+                        type="button"
+                        onClick={() => setLoginType('student')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all duration-300 ${
+                            loginType === 'student' ? 'bg-spicy text-white shadow-lg scale-[1.02]' : 'text-gray-500 hover:text-gray-300'
+                        }`}
+                    >
+                        <User size={20} /> Student
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setLoginType('admin')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all duration-300 ${
+                            loginType === 'admin' ? 'bg-dark-bg text-spicy-yellow border border-gray-700 shadow-lg scale-[1.02]' : 'text-gray-500 hover:text-gray-300'
+                        }`}
+                    >
+                        <ShieldCheck size={20} /> Admin
+                    </button>
+                </div>
+
+                {error && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm mb-6 text-center font-medium">
+                        {error}
+                    </motion.div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Email Address</label>
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-400 ml-1">Email</label>
+                        <div className="relative group">
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-spicy transition-colors" size={20} />
                             <input
                                 type="email"
-                                name="email"
                                 required
-                                value={formData.email}
-                                onChange={handleChange}
-                                className="w-full bg-dark-bg/50 border border-gray-700 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-spicy-yellow focus:ring-1 focus:ring-spicy-yellow transition-colors"
-                                placeholder="student@college.edu"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-dark-surface/50 border border-gray-700 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-spicy focus:ring-1 focus:ring-spicy/30 transition-all outline-none"
+                                placeholder="Enter your email"
                             />
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
-                        <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                    <div className="space-y-2">
+                        <label className="text-sm font-semibold text-gray-400 ml-1">Password</label>
+                        <div className="relative group">
+                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-spicy transition-colors" size={20} />
                             <input
                                 type="password"
-                                name="password"
                                 required
-                                value={formData.password}
-                                onChange={handleChange}
-                                className="w-full bg-dark-bg/50 border border-gray-700 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-spicy focus:ring-1 focus:ring-spicy transition-colors"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-dark-surface/50 border border-gray-700 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-spicy focus:ring-1 focus:ring-spicy/30 transition-all outline-none"
                                 placeholder="••••••••"
                             />
                         </div>
                     </div>
 
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                    <button
                         type="submit"
-                        className="w-full bg-gradient-to-r from-spicy to-spicy-red text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,92,0,0.3)] hover:shadow-[0_0_25px_rgba(255,92,0,0.5)] transition-shadow"
+                        className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                            loginType === 'student' 
+                            ? 'bg-gradient-to-r from-spicy to-spicy-red text-white hover:shadow-[0_0_25px_rgba(255,92,0,0.4)]' 
+                            : 'bg-dark-surface border border-spicy-yellow text-spicy-yellow hover:bg-gray-800'
+                        }`}
                     >
-                        <LogIn size={20} />
-                        <span>Sign In</span>
-                    </motion.button>
+                        Sign In <ArrowRight size={20} />
+                    </button>
                 </form>
 
-                <p className="text-center text-gray-400 mt-6 text-sm">
-                    Don't have an account?{' '}
-                    <Link to="/register" className="text-spicy-yellow hover:text-spicy-light transition-colors font-semibold">
-                        Register now
+                <div className="mt-10 text-center text-gray-400">
+                    New to Chator Adda?{' '}
+                    <Link to="/register" className="text-spicy-yellow font-bold hover:text-spicy transition-colors">
+                        Create account
                     </Link>
-                </p>
+                </div>
             </motion.div>
         </div>
     );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { ShoppingBag, Home, History } from 'lucide-react';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -9,12 +9,29 @@ import Cart from './components/Cart';
 import AdminDashboard from './pages/AdminDashboard';
 import InventoryManager from './components/InventoryManager';
 import OrderManager from './components/OrderManager';
-import OrderTracker from './components/OrderTracker';
-import OrderHistory from './components/OrderHistory'; // NEW COMPONENT
+import AdminCompletedOrders from './components/AdminCompletedOrders';
+import OrderHistory from './components/OrderHistory';
 import { useCart } from './context/CartContext';
 
+// --- ROUTE GUARDS ---
+// 1. Protects routes that require ANY logged-in user (like their Order History)
+const ProtectedRoute = ({ children }) => {
+  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  return userInfo ? children : <Navigate to="/login" />;
+};
+
+// 2. Protects Admin routes specifically
+const AdminRoute = ({ children }) => {
+  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  // Ensure the user exists AND has admin privileges
+  if (userInfo && (userInfo.isAdmin === true || userInfo.role === 'admin')) {
+    return children;
+  }
+  return <Navigate to="/login" />;
+};
+
 const Navbar = ({ onCartClick }) => {
-  const { cartItems, activeOrder } = useCart();
+  const { cartItems } = useCart();
   const location = useLocation();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/';
   const isAdminPage = location.pathname.startsWith('/admin');
@@ -28,17 +45,8 @@ const Navbar = ({ onCartClick }) => {
       </Link>
 
       <div className="flex items-center gap-6">
-        
-        {/* Glow button ONLY shows when there is an active order */}
-        {activeOrder && (
-          <Link to="/track" className="bg-spicy text-white px-4 py-2 rounded-xl font-bold animate-pulse hover:scale-105 transition-transform">
-            Track Order
-          </Link>
-        )}
-
-        {/* Normal History link */}
         <Link to="/orders" className="text-gray-400 hover:text-spicy-yellow transition-colors font-medium flex items-center gap-2">
-          <History size={18} /> History
+          <History size={18} /> Orders
         </Link>
 
         <Link to="/menu" className="text-gray-400 hover:text-spicy-yellow transition-colors font-medium flex items-center gap-2">
@@ -71,20 +79,28 @@ function App() {
 
         <main className="flex-grow">
           <Routes>
-            {/* Public/Student Routes */}
+            {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/menu" element={<Menu />} />
-            <Route path="/track" element={<OrderTracker />} />
             
-            {/* NEW: Route for the order history */}
-            <Route path="/orders" element={<OrderHistory />} />
+            {/* Protected Student Routes */}
+            <Route path="/orders" element={
+              <ProtectedRoute>
+                <OrderHistory />
+              </ProtectedRoute>
+            } />
 
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminDashboard />}>
+            {/* Protected Admin Routes */}
+            <Route path="/admin" element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }>
               <Route index element={<div className="text-2xl font-bold flex items-center h-full text-gray-400">Welcome to the Admin Panel. Select an option from the sidebar.</div>} />
               <Route path="orders" element={<OrderManager />} />
+              <Route path="completed" element={<AdminCompletedOrders />} />
               <Route path="inventory" element={<InventoryManager />} />
             </Route>
           </Routes>
