@@ -8,18 +8,23 @@ const generateToken = (id) => {
 
 // Register user
 const registerUser = async (req, res) => {
-    const { name, email, password } = req.body;
+    // 1. Destructure 'username' from the request body
+    const { name, username, email, password } = req.body;
+
     try {
-        const userExists = await User.findOne({ email });
+        // 2. Check if EITHER email or username already exists
+        const userExists = await User.findOne({ $or: [{ email }, { username }] });
         if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({ message: 'User with this email or username already exists' });
         }
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        // 3. Include 'username' in the creation object
         const user = await User.create({
             name,
+            username,
             email,
             password: hashedPassword,
         });
@@ -28,9 +33,9 @@ const registerUser = async (req, res) => {
             res.status(201).json({
                 _id: user.id,
                 name: user.name,
+                username: user.username,
                 email: user.email,
                 role: user.role,
-                profileImg: user.profileImg,
                 token: generateToken(user._id),
             });
         } else {
@@ -43,21 +48,26 @@ const registerUser = async (req, res) => {
 
 // Login User
 const loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    // 1. Extract 'username' instead of 'email'
+    const { username, password } = req.body;
+
     try {
-        const user = await User.findOne({ email });
+        // 2. Find the user by their unique username
+        const user = await User.findOne({ username });
 
         if (user && (await bcrypt.compare(password, user.password))) {
             res.json({
                 _id: user.id,
                 name: user.name,
+                username: user.username,
                 email: user.email,
                 role: user.role,
                 profileImg: user.profileImg,
                 token: generateToken(user._id),
             });
         } else {
-            res.status(401).json({ message: 'Invalid email or password' });
+            // This is the 401 error you were seeing because 'user' was null
+            res.status(401).json({ message: 'Invalid username or password' });
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -110,6 +120,7 @@ const seedAdmin = async (req, res) => {
 
         const adminUser = await User.create({
             name: 'Super Admin',
+            username: 'admin',
             email: 'admin@chatoradda.com',
             password: hashedPassword,
             role: 'admin'

@@ -6,6 +6,9 @@ const InventoryManager = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    
+    // NEW: Track which item is being edited. If null, we are adding a new item.
+    const [editingItemId, setEditingItemId] = useState(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -37,12 +40,37 @@ const InventoryManager = () => {
         fetchItems();
     }, []);
 
-    // 2. Add New Item
-    const handleAddItem = async (e) => {
+    // NEW: Open modal for Adding
+    const openAddModal = () => {
+        setEditingItemId(null);
+        setFormData({ name: '', description: '', price: '', category: 'Snacks', imageUrl: '', isSpicy: false, isOutofStock: false });
+        setIsModalOpen(true);
+    };
+
+    // NEW: Open modal for Editing and pre-fill data
+    const openEditModal = (item) => {
+        setEditingItemId(item._id);
+        setFormData({
+            name: item.name,
+            description: item.description || '',
+            price: item.price,
+            category: item.category,
+            imageUrl: item.imageUrl || '',
+            isSpicy: item.isSpicy || false,
+            isOutofStock: item.isOutofStock || false
+        });
+        setIsModalOpen(true);
+    };
+
+    // 2. Handle Add OR Update Form Submission
+    const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await fetch('/api/menu', {
-                method: 'POST',
+            const url = editingItemId ? `/api/menu/${editingItemId}` : '/api/menu';
+            const method = editingItemId ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
@@ -52,16 +80,26 @@ const InventoryManager = () => {
 
             if (response.ok) {
                 const savedItem = await response.json();
-                setItems([...items, savedItem]);
+                
+                if (editingItemId) {
+                    // Update existing item in the state array
+                    setItems(items.map(item => item._id === editingItemId ? savedItem : item));
+                } else {
+                    // Add new item to the state array
+                    setItems([...items, savedItem]);
+                }
+                
                 setIsModalOpen(false);
-                setFormData({ name: '', description: '', price: '', category: 'Snacks', imageUrl: '', isSpicy: false, isOutofStock: false });
+                setEditingItemId(null);
+            } else {
+                alert(`Failed to ${editingItemId ? 'update' : 'add'} item`);
             }
         } catch (err) {
-            alert("Failed to add item");
+            console.error("Submit error:", err);
         }
     };
 
-    // 3. Toggle Stock Status
+    // 3. Toggle Stock Status (Quick Action)
     const toggleStock = async (item) => {
         try {
             const response = await fetch(`/api/menu/${item._id}`, {
@@ -106,24 +144,24 @@ const InventoryManager = () => {
                     <p className="text-gray-400">Manage your menu items, pricing, and availability.</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={openAddModal}
                     className="bg-spicy text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-spicy-dark transition-colors shadow-lg shadow-spicy/30"
                 >
                     <Plus size={20} /> Add New Item
                 </button>
             </div>
 
-            {/* Modal for Adding Items */}
+            {/* Modal for Adding/Editing Items */}
             <AnimatePresence>
                 {isModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setIsModalOpen(false); setEditingItemId(null); }} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
                         <motion.div initial={{ scale: 0.95 }} animate={{ scale: 1 }} className="relative glass-card p-6 w-full max-w-md shadow-2xl overflow-y-auto max-h-[90vh]">
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold">Add Spicy Dish</h2>
-                                <button onClick={() => setIsModalOpen(false)}><X /></button>
+                                <h2 className="text-xl font-bold">{editingItemId ? 'Edit Spicy Dish' : 'Add Spicy Dish'}</h2>
+                                <button onClick={() => { setIsModalOpen(false); setEditingItemId(null); }}><X /></button>
                             </div>
-                            <form onSubmit={handleAddItem} className="space-y-4">
+                            <form onSubmit={handleSubmit} className="space-y-4">
                                 <input type="text" placeholder="Item Name" className="w-full bg-dark-bg p-3 rounded-lg border border-gray-800" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                                 <textarea placeholder="Description" className="w-full bg-dark-bg p-3 rounded-lg border border-gray-800" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
                                 <input type="number" placeholder="Price (₹)" className="w-full bg-dark-bg p-3 rounded-lg border border-gray-800" value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} required />
@@ -131,19 +169,21 @@ const InventoryManager = () => {
                                     <option value="Snacks">Snacks</option>
                                     <option value="Meals">Meals</option>
                                     <option value="Beverages">Beverages</option>
+                                    <option value="Desserts">Desserts</option>
                                 </select>
                                 <input type="text" placeholder="Image URL" className="w-full bg-dark-bg p-3 rounded-lg border border-gray-800" value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} />
                                 <div className="flex gap-4">
                                     <label className="flex items-center gap-2"><input type="checkbox" checked={formData.isSpicy} onChange={e => setFormData({ ...formData, isSpicy: e.target.checked })} /> Spicy?</label>
                                 </div>
-                                <button type="submit" className="w-full bg-spicy text-white py-3 rounded-xl font-bold mt-4">Save to Menu</button>
+                                <button type="submit" className="w-full bg-spicy text-white py-3 rounded-xl font-bold mt-4">
+                                    {editingItemId ? 'Update Item' : 'Save to Menu'}
+                                </button>
                             </form>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
 
-            {/* Table remains largely the same but uses 'item' data and 'toggleStock(item)' */}
             <div className="glass-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -161,8 +201,8 @@ const InventoryManager = () => {
                                 <tr key={item._id} className={`hover:bg-dark-surface/30 transition-colors ${item.isOutofStock ? 'opacity-70' : ''}`}>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
-                                                {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-cover" /> : <ImageIcon size={20} className="text-gray-500" />}
+                                            <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+                                                {item.imageUrl ? <img src={item.imageUrl} className="w-full h-full object-cover" alt={item.name} /> : <ImageIcon size={20} className="text-gray-500" />}
                                             </div>
                                             <div>
                                                 <p className="font-bold text-white">{item.name}</p>
@@ -181,7 +221,15 @@ const InventoryManager = () => {
                                         </label>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <button onClick={() => handleDelete(item._id)} className="p-2 text-gray-400 hover:text-red-400"><Trash2 size={18} /></button>
+                                        <div className="flex justify-end gap-2">
+                                            {/* NEW: Edit Button */}
+                                            <button onClick={() => openEditModal(item)} className="p-2 text-gray-400 hover:text-blue-400 transition-colors">
+                                                <Edit2 size={18} />
+                                            </button>
+                                            <button onClick={() => handleDelete(item._id)} className="p-2 text-gray-400 hover:text-red-400 transition-colors">
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

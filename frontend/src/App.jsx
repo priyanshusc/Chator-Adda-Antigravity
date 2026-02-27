@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { ShoppingBag, Home, History } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { ShoppingBag, Home, History, User, Settings, LogOut, ChevronDown } from 'lucide-react';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -12,6 +12,7 @@ import OrderManager from './components/OrderManager';
 import AdminCompletedOrders from './components/AdminCompletedOrders';
 import OrderHistory from './components/OrderHistory';
 import { useCart } from './context/CartContext';
+import { AnimatePresence, motion } from 'framer-motion';
 
 // --- ROUTE GUARDS ---
 // 1. Protects routes that require ANY logged-in user (like their Order History)
@@ -30,11 +31,42 @@ const AdminRoute = ({ children }) => {
   return <Navigate to="/login" />;
 };
 
+// 3. Redirects logged-in users away from public auth pages
+const PublicRoute = ({ children }) => {
+  const userInfo = localStorage.getItem('userInfo');
+  // If user data exists, redirect them to the menu instead of showing login/register
+  return userInfo ? <Navigate to="/menu" replace /> : children;
+};
+
 const Navbar = ({ onCartClick }) => {
   const { cartItems } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/';
   const isAdminPage = location.pathname.startsWith('/admin');
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userInfo');
+    navigate('/login');
+    setIsProfileOpen(false);
+  };
 
   if (isAuthPage || isAdminPage) return null;
 
@@ -45,14 +77,14 @@ const Navbar = ({ onCartClick }) => {
       </Link>
 
       <div className="flex items-center gap-6">
+        <Link to="/menu" className="text-gray-400 hover:text-spicy-yellow transition-colors font-medium flex items-center gap-2">
+          <Home size={18} /> Menu
+        </Link>
+
         <Link to="/orders" className="text-gray-400 hover:text-spicy-yellow transition-colors font-medium flex items-center gap-2">
           <History size={18} /> Orders
         </Link>
 
-        <Link to="/menu" className="text-gray-400 hover:text-spicy-yellow transition-colors font-medium flex items-center gap-2">
-          <Home size={18} /> Menu
-        </Link>
-        
         <button
           onClick={onCartClick}
           className="relative text-white hover:text-spicy transition-colors"
@@ -64,6 +96,55 @@ const Navbar = ({ onCartClick }) => {
             </span>
           )}
         </button>
+
+        {/* PROFILE DROPDOWN */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            className="flex items-center gap-2 p-1 rounded-xl hover:bg-gray-800 transition-all border border-transparent hover:border-gray-700"
+          >
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-spicy to-spicy-red flex items-center justify-center text-white shadow-lg overflow-hidden border border-white/10">
+              {userInfo?.profileImg ? (
+                <img src={userInfo.profileImg} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <User size={20} />
+              )}
+            </div>
+          </button>
+
+          <AnimatePresence>
+            {isProfileOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute right-0 mt-3 w-56 bg-dark-surface rounded-2xl border border-gray-800 shadow-2xl overflow-hidden py-2"
+              >
+                <div className="px-4 py-3 border-b border-gray-600 mb-2">
+                  <p className="text-sm font-bold text-white truncate">{userInfo?.name || 'User'}</p>
+                  <p className="text-[10px] text-gray-500 truncate">{userInfo?.email}</p>
+                </div>
+
+                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:text-spicy-yellow hover:bg-gray-800/50 transition-all">
+                  <User size={16} /> Profile
+                </button>
+
+                <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:text-spicy-yellow hover:bg-gray-800/50 transition-all">
+                  <Settings size={16} /> Settings
+                </button>
+
+                <div className="h-px bg-gray-800 my-1 mx-2"></div>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all"
+                >
+                  <LogOut size={16} /> Logout
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </nav>
   );
@@ -79,12 +160,27 @@ function App() {
 
         <main className="flex-grow">
           <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+
+            <Route path="/" element={
+              <PublicRoute>
+                <Landing />
+              </PublicRoute>
+            } />
+
+            {/* Wrapped Auth Routes */}
+            <Route path="/login" element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            } />
+            <Route path="/register" element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            } />
+
             <Route path="/menu" element={<Menu />} />
-            
+
             {/* Protected Student Routes */}
             <Route path="/orders" element={
               <ProtectedRoute>

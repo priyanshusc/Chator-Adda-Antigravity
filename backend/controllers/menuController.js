@@ -10,6 +10,20 @@ const getMenuItems = async (req, res) => {
     }
 };
 
+// Get single menu item by ID
+const getMenuItemById = async (req, res) => {
+    try {
+        const item = await MenuItem.findById(req.params.id);
+        if (item) {
+            res.json(item);
+        } else {
+            res.status(404).json({ message: 'Menu item not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // Admin: Create Menu Item
 const createMenuItem = async (req, res) => {
     const { name, description, price, category, imageUrl, isOutofStock, isSpicy } = req.body;
@@ -61,4 +75,11 @@ const deleteMenuItem = async (req, res) => {
     }
 };
 
-module.exports = { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem };
+// This is the crucial line that was likely missing the new function!
+module.exports = { 
+    getMenuItems, 
+    getMenuItemById, 
+    createMenuItem, 
+    updateMenuItem, 
+    deleteMenuItem 
+};

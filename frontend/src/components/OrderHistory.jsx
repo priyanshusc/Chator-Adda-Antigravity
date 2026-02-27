@@ -127,7 +127,7 @@ const OrderHistory = () => {
                                     { icon: Clock, title: "Order Placed", desc: "We have received your order.", color: "from-yellow-400 to-yellow-600" },
                                     { icon: Flame, title: "In the Kitchen", desc: "The chef is preparing your spicy meal!", color: "from-spicy-yellow to-spicy" },
                                     { icon: CheckCircle2, title: "Ready for Pickup", desc: "It's hot and ready! Collect from counter.", color: "from-green-400 to-green-600" },
-                                    { icon: Receipt, title: "Picked Up & Completed", desc: "Enjoy your food! See you next time.", color: "from-blue-400 to-blue-600" }
+                                    { icon: Receipt, title: "Picked Up", desc: "Enjoy your food! See you next time.", color: "from-blue-400 to-blue-600" }
                                 ].map((stage, idx) => (
                                     <div key={idx} className={`flex items-start gap-6 transition-opacity ${currentStageIndex >= idx ? 'opacity-100' : 'opacity-40'}`}>
                                         <div className={`w-11 h-11 rounded-full flex items-center justify-center shrink-0 shadow-lg ${currentStageIndex >= idx ? `bg-gradient-to-br ${stage.color}` : 'bg-dark-surface border border-gray-700'}`}>

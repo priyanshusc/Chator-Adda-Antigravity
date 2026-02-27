@@ -25,11 +25,7 @@ const Menu = () => {
         fetchMenu();
     }, []);
 
-    if (loading) return (
-        <div className="min-h-screen flex items-center justify-center">
-            <Loader2 className="animate-spin text-spicy" size={48} />
-        </div>
-    );
+    if (loading) return <div className="min-h-screen pt-24 flex justify-center items-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-spicy"></div></div>;
 
     return (
         <div className="min-h-screen pt-24 pb-32 px-4 md:px-8 max-w-7xl mx-auto relative">
@@ -56,15 +52,15 @@ const Menu = () => {
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: index * 0.1 }}
-                            className={`glass-card overflow-hidden group flex flex-col ${item.isOutofStock ? 'opacity-60 grayscale' : ''}`}
+                            className={`glass-card overflow-hidden group flex md:flex-col flex-row ${item.isOutofStock ? 'opacity-60 grayscale' : ''}`}
                         >
-                            <div className="relative h-48 overflow-hidden">
-                                <img 
-                                    src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"} 
-                                    alt={item.name} 
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                            <div className="relative w-40 md:w-full h-40 md:h-48 flex-shrink-0 overflow-hidden">
+                                <img
+                                    src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                 />
-                                
+
                                 {item.isOutofStock && (
                                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                                         <span className="text-white font-bold text-lg bg-red-500/80 px-4 py-2 rounded-xl border border-red-400">Sold Out</span>
