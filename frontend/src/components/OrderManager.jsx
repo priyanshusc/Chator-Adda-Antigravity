@@ -50,7 +50,7 @@ const OrderManager = () => {
 
     const updateStatus = async (orderId, newStatus) => {
         try {
-            const res = await fetch(`/api/orders/${orderId}`, {
+            const res = await fetch(`/api/orders/${orderId}/status`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -60,7 +60,10 @@ const OrderManager = () => {
             });
             if (res.ok) {
                 const updatedOrder = await res.json();
-                setOrders(prev => prev.map(o => o._id === orderId ? updatedOrder : o));
+                // Update your local admin state so the UI changes immediately
+                setOrders(orders.map(order =>
+                    order._id === orderId ? { ...order, status: updatedOrder.status } : order
+                ));
             }
         } catch (error) {
             console.error("Failed to update status:", error);
@@ -162,7 +165,7 @@ const OrderManager = () => {
                                     <User size={16} /> {order.user?.name || "Student"}
                                     <span className="mx-1">•</span>
                                     <span className="text-gray-400">
-                                        {order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "Just Now"}
+                                        {order.createdAt ? new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just Now"}
                                     </span>
                                 </div>
 

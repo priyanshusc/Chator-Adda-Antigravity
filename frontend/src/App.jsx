@@ -133,7 +133,7 @@ const Navbar = ({ onCartClick }) => {
                   <Settings size={16} /> Settings
                 </button>
 
-                <div className="h-px bg-gray-800 my-1 mx-2"></div>
+                <div className="h-px bg-gray-800 mx-2"></div>
 
                 <button
                   onClick={handleLogout}

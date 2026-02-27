@@ -81,7 +81,7 @@ const OrderHistory = () => {
         if (currentStageIndex === -1 || activeOrder.status === 'Completed') currentStageIndex = 4;
 
         return (
-            <div className="min-h-screen bg-dark-bg pt-20 pb-12 px-4 sm:px-6">
+            <div className="min-h-screen bg-dark-bg pt-24 pb-12 px-4 sm:px-6">
                 <div className="max-w-3xl mx-auto space-y-6">
                     <button onClick={() => setSelectedOrderId(null)} className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors">
                         <ArrowLeft size={20} /> Back to All Orders
