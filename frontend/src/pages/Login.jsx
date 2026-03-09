@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ShieldCheck, ArrowRight } from 'lucide-react';
+import { useCart } from '../context/CartContext';
 
 const Login = () => {
     const [loginType, setLoginType] = useState('student');
@@ -9,6 +10,7 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const { setCartItems } = useCart();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -29,6 +31,12 @@ const Login = () => {
 
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('userInfo', JSON.stringify(data));
+
+                if (data.cart) {
+                    setCartItems(data.cart);
+                } else {
+                    setCartItems([]); // Failsafe: empty cart if they have none
+                }
 
                 navigate(data.role === 'admin' && loginType === 'admin' ? '/admin' : '/menu');
             } else {

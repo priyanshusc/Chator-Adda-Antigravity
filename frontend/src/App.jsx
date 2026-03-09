@@ -39,16 +39,18 @@ const PublicRoute = ({ children }) => {
 };
 
 const Navbar = ({ onCartClick }) => {
-  const { cartItems } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const { cartItems, clearCart } = useCart();
 
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/';
   const isAdminPage = location.pathname.startsWith('/admin');
+
+  const totalItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -64,6 +66,7 @@ const Navbar = ({ onCartClick }) => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userInfo');
+    clearCart();
     navigate('/login');
     setIsProfileOpen(false);
   };
@@ -90,9 +93,9 @@ const Navbar = ({ onCartClick }) => {
           className="relative text-white hover:text-spicy transition-colors"
         >
           <ShoppingBag size={24} />
-          {cartItems.length > 0 && (
+          {totalItemCount > 0 && (
             <span className="absolute -top-2 -right-2 bg-spicy-red text-white text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-dark-bg">
-              {cartItems.length}
+              {totalItemCount}
             </span>
           )}
         </button>

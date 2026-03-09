@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Flame, Leaf, Loader2, Utensils } from 'lucide-react';
+// Added 'Minus' to the lucide-react imports for the decrement button
+import { Plus, Flame, Leaf, Loader2, Utensils, Minus } from 'lucide-react'; 
 import { useCart } from '../context/CartContext';
 
 const Menu = () => {
     const [menuItems, setMenuItems] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { addToCart } = useCart();
+    
+    // Pulled in cartItems, updateQuantity, and removeFromCart from context
+    const { cartItems, addToCart, updateQuantity, removeFromCart } = useCart(); 
 
     useEffect(() => {
         const fetchMenu = async () => {
             try {
-                // Fetching from your real backend API
                 const response = await fetch('/api/menu');
                 if (!response.ok) throw new Error('Failed to fetch menu');
                 const data = await response.json();
@@ -46,48 +48,74 @@ const Menu = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {menuItems.map((item, index) => (
-                        <motion.div
-                            key={item._id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: index * 0.1 }}
-                            className={`glass-card overflow-hidden group flex md:flex-col flex-row ${item.isOutofStock ? 'opacity-60 grayscale' : ''}`}
-                        >
-                            <div className="relative w-40 md:w-full h-40 md:h-48 flex-shrink-0 overflow-hidden">
-                                <img
-                                    src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"}
-                                    alt={item.name}
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
+                    {menuItems.map((item, index) => {
+                        // Find this specific item in the cart to check its quantity
+                        const cartItem = cartItems.find(i => i._id === item._id);
+                        const quantity = cartItem ? cartItem.quantity : 0;
 
-                                {item.isOutofStock && (
-                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                                        <span className="text-white font-bold text-lg bg-red-500/80 px-4 py-2 rounded-xl border border-red-400">Sold Out</span>
+                        return (
+                            <motion.div
+                                key={item._id}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: index * 0.1 }}
+                                className={`glass-card overflow-hidden group flex md:flex-col flex-row ${item.isOutofStock ? 'opacity-60 grayscale' : ''}`}
+                            >
+                                <div className="relative w-40 md:w-full h-40 md:h-48 flex-shrink-0 overflow-hidden">
+                                    <img
+                                        src={item.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"}
+                                        alt={item.name}
+                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                    />
+
+                                    {item.isOutofStock && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                            <span className="text-white font-bold text-lg bg-red-500/80 px-4 py-2 rounded-xl border border-red-400">Sold Out</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="p-5 flex-grow flex flex-col">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="text-xl font-bold group-hover:text-spicy-yellow transition-colors">{item.name}</h3>
+                                        {item.isSpicy && <Flame size={18} className="text-spicy" />}
                                     </div>
-                                )}
-                            </div>
+                                    <p className="text-gray-400 text-sm mb-4 line-clamp-2">{item.description}</p>
 
-                            <div className="p-5 flex-grow flex flex-col">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="text-xl font-bold group-hover:text-spicy-yellow transition-colors">{item.name}</h3>
-                                    {item.isSpicy && <Flame size={18} className="text-spicy" />}
+                                    <div className="mt-auto flex items-center justify-between">
+                                        <span className="text-2xl font-bold text-white">₹{item.price}</span>
+                                        
+                                        {/* CONDITIONAL RENDER: Quantity Selector OR Plus Button */}
+                                        {quantity > 0 ? (
+                                            <div className="flex items-center gap-3 bg-gray-800 rounded-xl p-1 shadow-inner border border-gray-700">
+                                                <button
+                                                    onClick={() => quantity === 1 ? removeFromCart(item._id) : updateQuantity(item._id, -1)}
+                                                    className="w-8 h-8 rounded-lg bg-dark-surface flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-all"
+                                                >
+                                                    <Minus size={16} />
+                                                </button>
+                                                <span className="font-bold text-white w-4 text-center">{quantity}</span>
+                                                <button
+                                                    onClick={() => updateQuantity(item._id, 1)}
+                                                    className="w-8 h-8 rounded-lg bg-dark-surface flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-all"
+                                                >
+                                                    <Plus size={16} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => !item.isOutofStock && addToCart(item)}
+                                                disabled={item.isOutofStock}
+                                                className={`p-3 rounded-xl transition-all ${item.isOutofStock ? 'bg-gray-700 cursor-not-allowed' : 'bg-spicy text-white hover:bg-spicy-red shadow-lg'}`}
+                                            >
+                                                <Plus size={20} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                                <p className="text-gray-400 text-sm mb-4 line-clamp-2">{item.description}</p>
-
-                                <div className="mt-auto flex items-center justify-between">
-                                    <span className="text-2xl font-bold text-white">₹{item.price}</span>
-                                    <button
-                                        onClick={() => !item.isOutofStock && addToCart(item)}
-                                        disabled={item.isOutofStock}
-                                        className={`p-3 rounded-xl transition-all ${item.isOutofStock ? 'bg-gray-700 cursor-not-allowed' : 'bg-spicy text-white hover:bg-spicy-red'}`}
-                                    >
-                                        <Plus size={20} />
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
+                            </motion.div>
+                        );
+                    })}
                 </div>
             )}
         </div>

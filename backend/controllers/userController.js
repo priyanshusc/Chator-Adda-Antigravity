@@ -46,13 +46,29 @@ const registerUser = async (req, res) => {
     }
 };
 
+const updateCart = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+        if (user) {
+            user.cart = req.body.cartItems || []; // Get the items from frontend
+
+            // THE FIX: Force MongoDB to recognize the array change
+            user.markModified('cart');
+
+            await user.save(); // Now this will actually trigger the updatedAt!
+            res.json(user.cart);
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // Login User
 const loginUser = async (req, res) => {
-    // 1. Extract 'username' instead of 'email'
     const { username, password } = req.body;
-
     try {
-        // 2. Find the user by their unique username
         const user = await User.findOne({ username });
 
         if (user && (await bcrypt.compare(password, user.password))) {
@@ -63,10 +79,10 @@ const loginUser = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 profileImg: user.profileImg,
+                cart: user.cart, // <-- NEW: Send the saved cart back on login
                 token: generateToken(user._id),
             });
         } else {
-            // This is the 401 error you were seeing because 'user' was null
             res.status(401).json({ message: 'Invalid username or password' });
         }
     } catch (error) {
@@ -132,4 +148,4 @@ const seedAdmin = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, loginUser, getUserProfile, uploadProfileImage, seedAdmin };
+module.exports = { registerUser, loginUser, getUserProfile, uploadProfileImage, seedAdmin, updateCart };
