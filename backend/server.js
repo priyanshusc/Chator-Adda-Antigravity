@@ -4,6 +4,9 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/db');
 require('dotenv').config();
+const userRoutes = require('./routes/userRoutes');
+const menuRoutes = require('./routes/menuRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 
 // Connect to MongoDB
 connectDB();
@@ -23,10 +26,6 @@ app.set('socketio', io);
 app.use(cors());
 app.use(express.json());
 
-// Routes
-const userRoutes = require('./routes/userRoutes');
-const menuRoutes = require('./routes/menuRoutes');
-const orderRoutes = require('./routes/orderRoutes');
 
 app.use('/api/users', userRoutes);
 app.use('/api/menu', menuRoutes);

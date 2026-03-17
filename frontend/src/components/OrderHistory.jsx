@@ -98,7 +98,7 @@ const OrderHistory = () => {
                             </div>
                         </div>
                         <div className="absolute bottom-4 left-4 right-4 bg-dark-bg/80 backdrop-blur disabled p-3 rounded-lg border border-gray-800 text-sm text-center">
-                            <p className="font-semibold text-spicy-yellow">Chator Adda Kitchen ➔ Campus Food Court</p>
+                            <p className="font-semibold text-spicy-yellow">LiveBite Kitchen ➔ Campus Food Court</p>
                         </div>
                     </motion.div>
 
@@ -186,7 +186,7 @@ const OrderHistory = () => {
             ) : (
                 <div className="grid gap-6">
                     <AnimatePresence>
-                        {orders.map((order, index) => (
+                        {orders.map((order) => (
                             <motion.div
                                 onClick={() => setSelectedOrderId(order._id)}
                                 initial={{ opacity: 0, y: 20 }}

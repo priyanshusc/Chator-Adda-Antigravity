@@ -75,8 +75,8 @@ const Navbar = ({ onCartClick }) => {
 
   return (
     <nav className="fixed top-0 w-full z-30 bg-dark-bg/80 backdrop-blur-md border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-      <Link to="/" className="text-xl font-display font-bold text-gradient flex items-center gap-2">
-        <span className="text-2xl">🌶️</span> Chator Adda
+      <Link to="/" className="text-2xl font-display font-bold text-gradient flex items-center gap-2">
+        <span className="text-2xl">🌶️</span> LiveBite
       </Link>
 
       <div className="flex items-center gap-6">

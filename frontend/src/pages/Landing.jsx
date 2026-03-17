@@ -37,7 +37,7 @@ const Landing = () => {
 
                     <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold leading-tight tracking-tight">
                         Welcome to <br />
-                        <span className="text-gradient drop-shadow-sm">Chator Adda</span>
+                        <span className="text-gradient drop-shadow-sm">LiveBite</span>
                     </h1>
 
                     <p className="text-gray-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
@@ -134,7 +134,7 @@ const Landing = () => {
                         Serving the Campus <br /> Since <span className="text-spicy drop-shadow-md">2025</span>
                     </h2>
                     <p className="text-gray-300 text-lg leading-relaxed">
-                        "[Cafe Owner's Quote: We started Chator Adda with a simple mission—to give students the best quality snacks without burning a hole in their pockets. Everything is made fresh, every single day.]"
+                        "[Cafe Owner's Quote: We started LiveBite with a simple mission—to give students the best quality snacks without burning a hole in their pockets. Everything is made fresh, every single day.]"
                     </p>
                     <div className="flex items-center gap-4 pt-4">
                         <div className="flex -space-x-3">
